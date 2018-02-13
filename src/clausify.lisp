@@ -11,7 +11,7 @@
 
 ;;;; Qui di seguito le definizioni delle componenti che costituiscono le fbf
 ;;;;
-;;;; termine      ::= <costante> | <simbolo> | <funzione>
+;;;; termine      ::= <costante> | <variabile> | <funzione>
 ;;;; costante     ::= <numeri> | <simboli che cominciano con una lettera>
 ;;;; variabile    ::= <simboli che cominciano con un ?>
 ;;;; funzione     ::= '(' <simbolo> <termine>+ ')'
@@ -43,12 +43,40 @@
 
 ;;;; Funzioni interfaccia:
 ;;;;   1.(as-cnf (fbf)) -> riscrive la fbf in una formula cnf
-;;;;   2.(is-horn (fbf)) -> restituisce true se la fbf è una clausola di Horn
+;;;;   2.(is-horn (fbf)) -> restituisce true se la fbf e' una clausola di Horn
+
+;;;; Restituisce true se oper e' un operatore logico
+(defun is-an-operator (oper)
+  (or
+   (eq oper 'not)
+   (eq oper 'and)
+   (eq oper 'or)
+   (eq oper 'implies)
+   (eq oper 'every)
+   (eq oper 'exist)))
 
 
+(defun is-letter (iterm)
+  (not (parse-integer (eval iterm) :start 0 :end 1 :junk-allowed t)))
+
+;;;; Restituisce true se iterm e' un simbolo che inizia con una lettera
+
+(defun is-symbol (iterm)
+  (and 
+   (symbolp iterm)
+   (is-letter iterm)))
+
+;;;; 
+(defun is-variable (var)
+  (and
+   (not (listp var))
+   (not (is-operator var))
+   (symbolp var)
+   (char= #\? (char (eval var) 0))))
+
+;;;; Restituisce true se iterm e' una costante, una variabile oppure una funzione
 (defun is-term (iterm)
 	(or
 		(constp iterm)
 		(variablep iterm)
-		(funp iterm)))
-
+		(and (listp iterm) (funp iterm))))
