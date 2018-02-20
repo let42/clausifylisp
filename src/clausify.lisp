@@ -182,7 +182,59 @@
   (apply #'skolem-function* args))
 
 
-;;;;
+(defun rewrite (iform &optional univars)
+  (cond
+    ((not (listp iform)) iform)
+    ((eq (first iform) 'implies) (rewrite-implication iform univars))
+    ((eq (first iform) 'not) (rewrite-not iform univars))
+    ((eq (first iform) 'every) (rewrite-every iform univars))
+    ((eq (first iform) 'exist) (rewrite-exist iform univars))
+    ((eq (first iform) 'and)
+     (list 'and (rewrite (second iform) univars)
+	   (rewrite (third iform) univars)))
+    ((eq (first iform) 'or)
+     (list 'or (rewrite (second iform) univars)
+	   (rewrite (third iform) univars)))
+    (T f)))
+
+(defun rewrite-implication (iform &optional univars)
+  (rewrite (list 'or (list 'not (second iform)) (third iform)) univars))
+
+(defun rewrite-not (iform &optional univars)
+  (cond
+    ((not (listp (second iform))) iform)
+    ((eq (first (second iform)) 'not) (rewrite (second (second iform)) univars))
+    ((eq (first (second iform)) 'and)
+     (rewrite (list 'or (list 'not (second (second iform)))
+		    (list 'not (third (second iform)))) univars))
+    ((eq (first (second iform)) 'or)
+     (rewrite (list 'and (list 'not (second (second iform)))
+		    (list 'not (third (second iform)))) univars))
+    ((eq (first (second iform)) 'implies)
+     (rewrite (list 'implies (list 'not (second (second iform)))
+		    (list 'not (third (second iform)))) univars))
+    ((eq (first (second iform)) 'every)
+     (rewrite (list 'exist (list 'not (second (second iform)))
+		    (list 'not (third (second iform)))) univars))
+    ((eq (first (second iform)) 'exist)
+     (rewrite (list 'every (list 'not (second (second iform)))
+		    (list 'not (third (second iform)))) univars))
+    (T iform)))
+
+(defun rewrite-every (iform &optional univars)
+  (rewrite (third f) (append univars (list (second iform)))))
+
+(defun rewrite-exist (iform &optional univars)
+  (cond
+    ((null univars)
+     (rewrite (substitute (skolem-vars) (second iform) (third iform))
+	      univars))
+    (T (rewrite (subst (skolem-function univars) (second iform)
+		       (third iform)) univars))))
+
+    
+
+;;;; 
 (defun simplify (iform)
   (cond
     ((not (listp iform)) f)
