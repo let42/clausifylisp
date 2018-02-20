@@ -140,7 +140,7 @@
 
       (and
        (= (arity iform) 2)
-       (member (first ifrom) '(exist every))
+       (member (first iform) '(exist every))
        (is-variable (second iform))
        (is-wff (third iform)))
       (and
@@ -159,16 +159,26 @@
       (eq (first iform) 'or)
       (eq (first (second iform)) 'and))
      (list 'and
-	   (list 'or (dist (second (second iform))) (dist (third iform)))
-	   (list 'or (dist (third (second iform))) (dist (third iform)))))
+	   (list
+	    'or
+	    (distributivity (second (second iform)))
+	    (distributivity (third iform)))
+	   (list
+	    'or
+	    (distributivity (third (second iform)))
+	    (distributivity (third iform)))))
     ((and
       (eq (list-length iform) 3)
       (listp (third iform))
       (eq (first iform) 'or)
-      (eq (first (third iform) 'and)))
+      (eq (first (third iform)) 'and))
      (list 'and
-	   (list 'or (dist (second iform)) (dist (second (third iform))))
-	   (list 'or (dist (second iform)) (dist (third (third iform))))))
+	   (list 'or
+		 (distributivity (second iform))
+		 (distributivity (second (third iform))))
+	   (list 'or
+		 (distributivity (second iform))
+		 (distributivity (third (third iform))))))
     (T iform)))
 
 ;;;; Functions for skolemization of constant and functions
@@ -195,7 +205,7 @@
     ((eq (first iform) 'or)
      (list 'or (rewrite (second iform) univars)
 	   (rewrite (third iform) univars)))
-    (T f)))
+    (T iform)))
 
 (defun rewrite-implication (iform &optional univars)
   (rewrite (list 'or (list 'not (second iform)) (third iform)) univars))
@@ -222,7 +232,7 @@
     (T iform)))
 
 (defun rewrite-every (iform &optional univars)
-  (rewrite (third f) (append univars (list (second iform)))))
+  (rewrite (third iform) (append univars (list (second iform)))))
 
 (defun rewrite-exist (iform &optional univars)
   (cond
@@ -234,11 +244,112 @@
 
     
 
-;;;; 
+;;;; semplificazione delle congiunzioni e delle disgiunzioni
+;;;; nei casi di n-arita'
 (defun simplify (iform)
   (cond
-    ((not (listp iform)) f)
+    ((not (listp iform)) iform)
+    ((and
+      (member (first iform) '(and or))
+      (is-literal (second iform))
+      (is-literal (third iform)))
+     iform)
+    ((and
+      (member (first iform) '(and or))
+      (not (is-literal (third iform)))
+      (eq (first iform) (first (third (iform))))
+      (is-literal (second iform)))
+     (append
+      (list (first iform))
+      (list (second iform))
+      (rest (simplify (third iform)))))
+    ((and
+      (member (first iform) '(and or))
+      (not (is-literal (second iform)))
+      (not (eq (first iform) (first (second iform)))))
+     (append
+      (list (first iform))
+      (list (simplify (second iform)))
+      (list (third iform))))
+    ((and
+      (member (first iform) '(and or))
+      (not (is-literal (third iform)))
+      (not (eq (first iform) (first (third iform))))
+      (is-literal (second iform)))
+     (append
+      (list (first iform))
+      (list (second iform))
+      (list (simplify (third iform)))))
+    ((and
+      (member (first iform) '(and or))
+      (not (is-literal (second iform)))
+      (not (is-literal (third iform)))
+      (eq (first iform) (first (second iform)))
+      (eq (first iform) (first (third iform))))
+     (append
+      (simplify (second iform))
+      (rest (simplify (third iform)))))
+    ((and
+      (member (first iform) '(and or))
+      (not (is-literal (second iform)))
+      (not (is-literal (third iform)))
+      (eq (first iform) (first (third iform)))
+      (not (eq (first iform) (first (second iform)))))
+     (append
+      (list (first iform)) 
+      (list (simplify (second iform))) 
+      (rest (simplify (third iform)))))
+    ((and
+     (member (first iform) '(and or))
+     (not (is-literal (second iform)))
+     (not (is-literal (third iform)))
+     (not (eq (first iform) (first (third iform))))
+    (not (eq (first iform) (first (second iform)))))
+    (append
+     (list (first iform)) 
+     (list (simplify (second iform))) 
+     (list (simplify (third iform)))))
+    (T iform)))
+
+
+;;; Converte una wff in una cnf
+
+(defun as-cnf (wff)
+  (cond
+    ((eq T (is-wff wff))
+     (simplify (distributivity (rewrite wff))))
+    (T (pprint "La formula non e' ben formata"))))
+
+
+(defun pos-lit (literal)
+  (cond
+    ((null literal) 0)
+    ((null (rest literal))
+     (if (and
+	  (listp (first literal))
+	  (eq (first (first literal)) 'not))
+	 0
+	 1))
     (T
-     )))
+     (+ (pos-lit (list (first literal)))
+	(pos-lit (rest literal))))))
 
+(defun is-a-clause-of-horn (clausola)
+  (or
+   (and
+    (listp clausola)
+    (eq (first clausola) 'or)
+    (<= (pos-lit (list clausola)) 1))))
 
+(defun is-a-horn-cnf (wff)
+  (cond
+    ((null wff) nil)
+    ((and
+      (listp wff)
+      (eq (first wff) 'and))
+     (is-a-clause-of-horn (rest wff)))
+    (T
+     (is-a-clause-of-horn wff))))
+
+(defun is-horn (wff)
+  (is-a-horn-cnf (as-cnf wff)))
