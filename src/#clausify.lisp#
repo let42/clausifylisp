@@ -105,7 +105,7 @@
    (not (is-operator (first iterm)))
    (every 'is-term (rest iterm))))
 
-;;;; Restituisce true se iterm contiene Ë una costante
+;;;; Restituisce true se iterm contiene √® una costante
 (defun is-const (iterm)
   (and
    (not (listp iterm))
@@ -122,7 +122,7 @@
 		(is-variable iterm)
 		(and (listp iterm) (is-fun iterm))))
 
-;;;; Restituisce true se iform Ë un letterale
+;;;; Restituisce true se iform √® un letterale
 (defun is-literal (iform)
   (or
    (is-term iform)
@@ -131,11 +131,11 @@
     (is-term (second iform)))))
 
 
-;;;; Ritorna l'arit‡ di una formula 
+;;;; Ritorna l'arit√† di una formula 
 (defun arity (iform)
   (if (listp iform) (- (list-length iform) 1)))
 
-;;;; Restituisce true iform Ë una formula ben formata
+;;;; Restituisce true iform √® una formula ben formata
 ;;;; 
 (defun is-wff (iform)
   (cond
